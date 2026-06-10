@@ -7,7 +7,7 @@ const PORT = process.env.PORT || 3000;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 app.get('/', (req, res) => {
   res.json({ status: 'ok', message: 'AI Voice Writer backend is running' });
@@ -17,7 +17,8 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-app.post('/api/claude', async (req, res) => {
+// Shared handler for Claude API proxy
+async function claudeProxy(req, res) {
   try {
     if (!ANTHROPIC_API_KEY) {
       return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
@@ -37,7 +38,11 @@ app.post('/api/claude', async (req, res) => {
     console.error('Error proxying to Claude API:', error);
     res.status(500).json({ error: 'Failed to connect to Claude API', details: error.message });
   }
-});
+}
+
+// Support both /api/claude and /api/chat routes
+app.post('/api/claude', claudeProxy);
+app.post('/api/chat', claudeProxy);
 
 app.listen(PORT, () => {
   console.log('AI Voice Writer backend running on port ' + PORT);
